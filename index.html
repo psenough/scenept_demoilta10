@@ -1,0 +1,314 @@
+<!DOCTYPE html>
+<html>
+ <head>
+ 	<title>ScenePT Demoilta#10: 4-5 Abril 2015</title>
+ 	<meta charset='utf-8'>
+ 	<style>
+ 	@font-face {
+		font-family: 'Neuropol';
+		src: url('NEUROPOL.ttf') format('truetype');
+		font-weight: normal;
+		font-style: normal;
+	}
+	
+	* {
+		margin: 0px;
+		padding: 0px;
+		overflow: hidden;
+	}
+	
+	body {
+		background: url('bg.jpg');
+	}
+	
+ 	.aligncenter {
+ 		position: absolute;
+ 		top: 0px;
+ 		width: 100%;
+ 		text-align: center;
+ 		margin: auto;
+ 	}
+	
+	#message {
+		position: absolute;
+		top: 0px;
+		left: 0px;
+		font-family: 'Neuropol';
+		color: #fff;
+		width: 100%;
+		height: 100%;
+		margin: auto;
+		text-align: center;
+		font-size: 2em;
+		overflow-y: hidden;
+		text-shadow: 2px 0 0 #000, -2px 0 0 #000, 0 2px 0 #000, 0 -2px 0 #000, 1px 1px #000, -1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000;
+		line-height: 2em;
+		z-index: 21;
+	}
+	
+	#message span {
+		position: relative;
+		top: 35%;
+		transform: translateY(-50%);
+		font-size:2em;
+	}
+	
+	#message_console {
+		position: absolute;
+		bottom: 0px;
+		left: 0px;
+		font-family: 'Neuropol';
+		color: #fff;
+		width: 100%;
+		margin: auto;
+		text-align: left;
+		font-size: 1.5em;
+		overflow-y: hidden;
+		text-shadow: 2px 0 0 #000, -2px 0 0 #000, 0 2px 0 #000, 0 -2px 0 #000, 1px 1px #000, -1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000;
+		line-height: 1.5em;
+		z-index: 21;
+		padding-left: 10px;
+	}
+
+ 	</style>
+	<script src="requestanimationframe.js"></script>
+  	<script type="application/javascript">
+
+rand = function(n){
+	return Math.floor(Math.random()*n);
+};
+
+var rms = 1.0;
+var is_chrome = navigator.userAgent.indexOf('Chrome') > -1;
+var is_safari = navigator.userAgent.indexOf("Safari") > -1;
+if ((is_chrome)&&(is_safari)) {is_safari=false;}
+
+function init() {
+	try {
+		// Fix up for prefixing
+		window.AudioContext = window.AudioContext||window.webkitAudioContext;
+		audioContext = new AudioContext();
+		var request = new XMLHttpRequest();
+		if (is_safari) request.open('GET', 'cosmiq_inque-_.--._---_.-._-._.m4a', true);
+		else request.open('GET', 'cosmiq_inque-_.--._---_.-._-._.ogg', true);
+		request.responseType = 'arraybuffer';
+		console.log('requesting');
+		// Decode asynchronously
+		request.onload = function() {
+			decode(request.response);
+		}
+		request.send();
+	} catch(e) {
+		console.log('Web Audio API is not supported in this browser');
+		drawCanvas();
+	}
+}
+var levelChecker;
+var decode = function(response) {
+	audioContext.decodeAudioData(response, function(buffer) {
+		backgroundAudio = audioContext.createBufferSource(); // creates a sound source
+		backgroundAudio.buffer = buffer; // tell the source which sound to play
+		backgroundAudio.connect(audioContext.destination); // connect the source to the context's destination (the speakers)
+		backgroundAudio.loop = true;
+		backgroundAudio.start(0);
+		levelChecker = audioContext.createScriptProcessor(2048, 1, 2);
+		backgroundAudio.connect(levelChecker);
+		levelChecker.connect(audioContext.destination);
+		levelChecker.onaudioprocess = process;
+		console.log('audio playing');
+		// start canvas
+		drawCanvas();
+	}, function(evt) {
+		console.log('failed to load buffer');
+		console.log(evt);
+		drawCanvas();
+	});
+}
+var process = function(e) {
+	var buffer = e.inputBuffer.getChannelData(0);
+	var len = buffer.length;
+	var total = 0;
+	var i = 0;
+	while ( i < len ) total += Math.abs( buffer[i++] );
+	rms = (rms + Math.sqrt( total / len )) * 0.5;
+	//console.log(rms);
+}
+
+var w;
+var h;
+var ctx;
+
+function drawCanvas() {
+
+	resize();
+	loadLine('','');
+
+	var num = 35;
+	var angle = (Math.PI*2)/num;
+	var size = 10;
+	var opening, phase1, phase2;
+	var pad = 25;
+	var thissize = 100;
+	function drawThis() {
+		var d = new Date();
+		var timer = d.getTime();
+		
+		phase1 = timer/25000;
+		phase2 = timer/2500;
+		phase3 = timer/100;
+
+		ctx.fillStyle = "rgba(255,182,200,0.5)";
+		ctx.fillRect(0,0,w,h);
+		
+		var gray = parseInt((255-rms*100),10);
+		ctx.fillStyle = "rgba(250,250,250,0.1)";
+		var sizex = thissize;
+		var sizey = thissize*rms;
+		for (var thisx=0; thisx<w; thisx += sizex*2 ) {
+			for (var thisy=0; thisy<h; thisy += sizey*2 ) {
+				var posX = w - ((timer + thisx*.5 - sizex*Math.sin(thisy)) % (w + thissize));
+				var posY = h*.41 + Math.sin(phase2)*rms*10 - Math.cos(phase3 + thisx)*h*.5;
+				ctx.save();
+				ctx.translate( posX, parseInt(posY,10) );
+				ctx.beginPath();
+				ctx.moveTo(-sizex,-sizey);
+				ctx.lineTo(-sizex,sizey);
+				ctx.lineTo(sizex,sizey);
+				ctx.lineTo(sizex,-sizey);
+				ctx.closePath();
+				ctx.fill();
+				ctx.restore();
+			}
+		}	
+		
+	}
+	
+	requestAnimationFrame( animate );
+	
+	var d = new Date();
+	var n = d.getTime();
+	var scrollvalue = 0;
+	var repeater = n;
+	var rperiod = 50;
+	
+	var console_index = 0;
+	var console_starttime = 10000;
+	var console_repeater = n;
+	var console_period = 3000;
+
+	function animate() {
+		requestAnimationFrame( animate );
+		ctx.clearRect(0,0,w,h);
+		drawThis();
+		
+		var dom = document.getElementById('message');
+		if (dom) {
+			var d2 = new Date();
+			var n2 = d2.getTime(); 
+
+			if (((n2-n) > 5800) && (n2-repeater) > rperiod) {
+				repeater = n2;
+				loadLine('',information[rand(information.length)]);
+			}
+			
+			if ( ((n2-n) > console_starttime) && ((n2-console_repeater) > console_period) && (console_index < console_text.length) ) {
+				console_repeater = n2;
+				loadLineConsole(console_text[console_index++]);
+			}
+		}
+	}
+}
+
+window.onresize = resize;
+
+function resize() {
+	w = window.innerWidth;
+	h = window.innerHeight;
+	
+	var canvas = document.getElementById("canvas");
+	canvas.setAttribute("width", w);
+	canvas.setAttribute("height", h);
+	
+	ctx = canvas.getContext("2d");
+	ctx.width = w;
+	ctx.height = h;
+}
+
+function loadLine(thisclass, thistext) {
+var content = '';
+content += '<span class="'+thisclass+'">'+thistext+'</span><br />';
+document.getElementById('message').innerHTML = content;
+}
+
+var information = [
+'ArticaCC',
+'FCT',
+'5-6 Marco',
+'Demoilta #10',
+'invite',
+'Monte da Caparica',
+'superbock',
+'code by ps/tpolm',
+'music by cosmiq/inque',
+'accession only!',
+'greetings'
+];
+
+var console_text = [
+'bom dia alegria',
+'assumi que nao se vao dar ao trabalho de ver a source',
+'e portantos adicionei mais um scroller',
+'quantos mais melhor, ne?',
+'',
+'dias 4 e 5 de abril vai haver mais uma demoilta no monte da caparica',
+'nao confundir com demolita, que deve envolver lolitas',
+'aqui nao temos lolitas',
+'a menos que queiram trazer umas, seriam bem vindas',
+'mas nao era esse o plano',
+'',
+'desta vez as datas da demoilta coincidem com a revision 2015',
+'portantos double the action, triple the excitement',
+'shadowparty e demoilta, dois eventos scenofilos num so',
+'quem sabe ate seja o prenuncio do fim do mundo',
+'no outro dia o chuck norris tossiu',
+'',
+'portantos e melhor aproveitar enquanto e dia',
+'',
+'as hostilidades abrem dia 4 depois de almoco',
+'e acabam dia 5 ao final do dia com as ultimas competicoes da revision',
+'quem quiser crashar no partyplace deve trazer um saco cama',
+'custo de entrada, como habitualmente uma superbock por dia',
+'',
+'dizem que vem malta do norte de proposito e tudo',
+'vai ser uma cena assim tipo espectacular mas ainda mais melhor boa',
+'',
+'',
+'',
+'en el verano se come menos',
+'',
+'clap for greets \\o/',
+'',
+'louder',
+'',
+'not loud enough, no greets for you',
+'',
+'',
+'',
+'',
+'4 e 5 abril, monte da caparica, fct edificio 6, articacc'
+];
+
+function loadLineConsole(thistext) {
+document.getElementById('message_console').innerHTML += thistext+'<br />';
+}
+
+  </script>
+ </head>
+ <body onload="init()">
+ 	<div class="aligncenter">
+   		<canvas id="canvas" width="800" height="600"></canvas>
+   		<div id="message">forrando o sofá de rosa para a revision 2015...</div>
+   		<div id="message_console"></div>
+   	</div>
+ </body>
+</html>
